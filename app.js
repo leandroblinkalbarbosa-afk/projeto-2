@@ -1,30 +1,49 @@
-import { Categoria, ListaGastosPorCategoria } from "./classes.js";
-import { valorNegativo, atualizarInterface } from "./utils.js";
+import Classes from './classes.js';
+import Utils from './utils.js';
 
-const ListaGastosPorCategoria = new ListaGastosPorCategoria(
-    new Categoria("Alimentação"),
-    new Categoria("Transporte"),
-    new Categoria("Lazer"),
-    new Categoria("Outros")
-)
+import UsuarioService from './classes.js';
 
-const formulario = document.querySelector("form");
+import UI from './utils.js'
 
-formulario.addEventListener("submit", (evento) => {
-    evento.preventDefault();
+const apiUrl = 'https://crudcrud.com/api/2b43c3e413c14e66b95b00acd011b95b/usuario';
+const usuarioService = new UsuarioService(apiUrl);
+const ui = new UI('listaDeUsuarios', 'paragrafo');
 
-    const valorInformado = formulario.elements.valor.value;
-    const categoriaInformada = formulario.elements.categoria.value;
+document.getElementById('btn').addEventListener('click', async () => {
+    const nome = document.getElementById('nome').value;
+    const email = document.getElementById('email').value;
 
-    if (valorNegativo(valorInformado)) {
-        alert("Valor inválido. O valor não pode ser negativo.");
-        return;
+    if (!ui.validarFormulario(nome, email)) return;
+
+    try {
+        const novoUsuario = await usuarioService.adicionarUsuario({ nome, email });
+     
+        const item = ui.criarItem(novoUsuario);
+        ui.lista.appendChild(item);
+        ui.mostrarMensagem('Usuário adicionado com sucesso!');
+    } catch (error) {
+        ui.mostrarMensagem(error.message);
     }
+});
 
-    const categoria = ListaGastosPorCategoria.obterCategoriaPorNome(categoriaInformada);
-    categoria.adicionarValor(valorInformado);
+ui.lista.addEventListener('click', async (event) => {
+    if (event.target.classList.contains('btn-remover')) {
+        const id = event.target.dataset.id;
+        try {
+            await usuarioService.removerUsuario(id);
+            event.target.parentElement.remove();
+            ui.mostrarMensagem('Usuário removido com sucesso!');
+        } catch (error) {
+            ui.mostrarMensagem(error.message);
+        }
+    }
+});
 
-    atualizarInterface(gastosoPorCategoria);
-    formulario.reset();
-
-})
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const usuarios = await usuarioService.obterUsuarios();
+        ui.renderizarLista(usuarios);
+    } catch (error) {
+        ui.mostrarMensagem(error.message);
+    }
+});
